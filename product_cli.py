@@ -4,7 +4,7 @@ import sys
 import json
 from google.protobuf import empty_pb2
 
-# สมมติว่าไฟล์ .py ที่ generate จาก .proto อยู่ใน path
+# Path 
 import order_api_pb2
 import order_api_pb2_grpc
 
@@ -14,7 +14,7 @@ class ProductClient:
         self.stub = None
         try:
             self.channel = grpc.insecure_channel(target)
-            # ให้เวลา 1 วินาทีในการพยายามเชื่อมต่อ
+            
             grpc.channel_ready_future(self.channel).result(timeout=1)
             self.stub = order_api_pb2_grpc.ProductServiceStub(self.channel)
             print(f"🔌 Connected to gRPC server at {target}")
@@ -116,7 +116,7 @@ class ProductClient:
             
             count = 0
             for product in products_to_import:
-                # ตรวจสอบว่ามีข้อมูลที่จำเป็นครบถ้วน
+                
                 if 'name' not in product or 'price' not in product:
                     print(f"  -> Skipping product (missing name or price): {product}")
                     continue
@@ -189,7 +189,7 @@ def main():
         print("Exiting due to connection failure.", file=sys.stderr)
         sys.exit(1)
 
-    # Dictionary ที่จับคู่ชื่อ command กับฟังก์ชันที่จะเรียก
+    # Dictionary connect with command 
     command_functions = {
         'add': client.add_product,
         'list': client.list_products,
@@ -200,7 +200,7 @@ def main():
         'import_json': client.import_from_json,
     }
 
-    # เรียกฟังก์ชันที่ตรงกับ command ที่รับมา
+    
     func = command_functions.get(args.command)
     if func:
         func(args)

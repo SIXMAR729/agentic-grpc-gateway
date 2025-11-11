@@ -23,13 +23,13 @@ def get_role_from_context(context, secret):
     auth_header = metadata.get('authorization', None)
     
     if not auth_header:
-        # Client ไม่ได้ส่ง Token มาเลย
-        return "guest" # ให้บทบาท "guest" โดยอัตโนมัติ
+        
+        return "guest" # "guest" Role
 
     try:
         token_type, token = auth_header.split(' ')
         if token_type.lower() != 'bearer':
-            return "guest" # Token ไม่ใช่ประเภท Bearer
+            return "guest" 
             
         payload = jwt.decode(token, secret, algorithms=["HS256"])
         return payload.get('role', "guest") # Return role (Example "admin")
@@ -37,7 +37,7 @@ def get_role_from_context(context, secret):
     except jwt.ExpiredSignatureError:
         context.set_code(grpc.StatusCode.UNAUTHENTICATED)
         context.set_details("Token has expired.")
-        return None # Token หมดอายุ
+        return None # Expired Token
     except Exception as e:
         print(f"Token validation error: {e}")
         return "guest" # 
@@ -49,7 +49,7 @@ class Database:
         self._init_db()
 
     def _init_db(self):
-        # (ส่วนนี้เหมือนเดิม)
+        
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -81,7 +81,7 @@ class Database:
 
     @contextmanager
     def _get_connection(self):
-        # (ส่วนนี้เหมือนเดิม)
+        
         conn = sqlite3.connect(self.db_name)
         conn.row_factory = sqlite3.Row
         try:
@@ -91,7 +91,7 @@ class Database:
 
     # --- User Methods ---
     def get_user_by_username(self, username):
-        # (ส่วนนี้เหมือนเดิม)
+        
         with self._get_connection() as conn:
             return conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
         
@@ -114,18 +114,18 @@ class Database:
             
             conn.commit()
             
-            # SELECT กลับมาโดยใช้ Connection เดิม (ป้องกัน Race Condition)
+            
             row = cursor.execute("SELECT * FROM products WHERE product_id = ?", (product_id,)).fetchone()
             return row
-    # [แก้ไข] ⬆️ ⬆️ ⬆️ 
+     
 
     def get_product(self, product_id):
-        # (ส่วนนี้เหมือนเดิม)
+        
         with self._get_connection() as conn:
             return conn.execute("SELECT * FROM products WHERE product_id = ?", (product_id,)).fetchone()
 
     def update_product(self, product_id, name, description, price):
-        # (ส่วนนี้เหมือนเดิม)
+        
         with self._get_connection() as conn:
             cursor = conn.execute("UPDATE products SET name=?, description=?, price=? WHERE product_id=?",
                                   (name, description, price, product_id))
@@ -141,24 +141,23 @@ class Database:
             return cursor.rowcount > 0
 
     def list_products(self):
-        # (ส่วนนี้เหมือนเดิม)
-        # เรายังคงฟังก์ชัน .fetchall() นี้ไว้ เพราะ ExportProducts ใช้งานมันอยู่
+        
         with self._get_connection() as conn:
             return conn.execute("SELECT * FROM products").fetchall()
 
     def count_products(self):
-        # (ส่วนนี้เหมือนเดิม)
+        
         with self._get_connection() as conn:
             return conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
 
     def export_products(self):
-        # (ส่วนนี้เหมือนเดิม)
+        
         with self._get_connection() as conn:
             rows = conn.execute("SELECT * FROM products").fetchall()
             return json.dumps([dict(row) for row in rows], indent=2)
 
     # --- Order Methods ---
-    # (ส่วนนี้เหมือนเดิมทั้งหมด... create_order, get_order, ฯลฯ)
+    
     def create_order(self, user_id, items):
         total_amount = sum(item.quantity * item.price_per_item for item in items)
         with self._get_connection() as conn:
@@ -243,7 +242,7 @@ class ProductServiceServicer(order_api_pb2_grpc.ProductServiceServicer):
         self.db = db
 
     def CreateProduct(self, request, context):
-        # (ตอนนี้ create_product ปลอดภัยจาก Race Condition แล้ว)
+        
         row = self.db.create_product(request.name, request.description, request.price)
         if row is None:
             context.set_code(grpc.StatusCode.INTERNAL)
@@ -282,9 +281,9 @@ class ProductServiceServicer(order_api_pb2_grpc.ProductServiceServicer):
                 cursor = conn.cursor()
                 cursor.execute("SELECT * FROM products")
                 
-                # วน Loop ใน cursor โดยตรง (ห้าม .fetchall())
+                
                 for row in cursor:
-                    # 'yield' คือการ "สตรีม" ข้อมูล 1 ชิ้นนี้
+                    
                     yield order_api_pb2.Product(**row)
                     
         except grpc.RpcError as e:
@@ -311,7 +310,7 @@ class ProductServiceServicer(order_api_pb2_grpc.ProductServiceServicer):
             with self.db._get_connection() as conn:
                 cursor = conn.cursor()
                 
-                # [แก้ไข] ใช้ UPPER() เพื่อให้ค้นหาแบบ Case-Insensitive
+                
                 sql_query = "SELECT * FROM products WHERE UPPER(name) LIKE UPPER(?) LIMIT ?"
                 params = (f"%{search_query}%", limit)
                 
@@ -331,18 +330,18 @@ class ProductServiceServicer(order_api_pb2_grpc.ProductServiceServicer):
             context.set_details(f"An internal error occurred: {e}")
             
         print("Product Stream (Search) สิ้นสุดลง")
-    # [เพิ่มใหม่] ⬆️ ⬆️ ⬆️ 
+    
 
     def CountProducts(self, request, context):
         count = self.db.count_products()
         return order_api_pb2.CountResponse(count=count)
     
     def ExportProducts(self, request, context):
-        # ฟังก์ชันนี้ยังคงทำงานแบบ Unary และใช้ .list_products() (ที่ใช้ .fetchall())
+        
         json_data = self.db.export_products()
         return order_api_pb2.ExportResponse(json_data=json_data)
 
-# --- OrderService (เหมือนเดิม) ---
+# --- OrderService  ---
 class OrderServiceServicer(order_api_pb2_grpc.OrderServiceServicer):
     def __init__(self, db):
         self.db = db
@@ -379,7 +378,7 @@ class OrderServiceServicer(order_api_pb2_grpc.OrderServiceServicer):
         json_data = self.db.export_orders()
         return order_api_pb2.ExportResponse(json_data=json_data)
 
-# --- Server Startup (เหมือนเดิม) ---
+# --- Server Startup  ---
 def serve():
     db = Database(DATABASE_NAME)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

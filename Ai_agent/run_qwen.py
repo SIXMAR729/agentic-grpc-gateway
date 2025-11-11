@@ -205,7 +205,6 @@ class APIClient:
                     products_list.append(self._message_to_dict(product))
                 count += 1
             
-            # ✅ [แก้ไข] ส่ง List ขนาดเล็ก (20 ชิ้น) และข้อความเตือนกลับไป
             if count > limit_for_ai:
                 summary_message = f"Found {count} total products, but only showing the first {limit_for_ai}."
                 return {"summary": summary_message, "products": products_list}
@@ -323,7 +322,6 @@ class APIClient:
 
 
 # --- *** MODIFIED *** AI Agent Class (Manual Ollama Version) ---
-# (ส่วนนี้ของคุณถูกต้องสมบูรณ์แล้ว)
 class AIAgent:
     """Manages the AI model (Qwen2) and conversation loop via direct API calls."""
     
@@ -332,7 +330,6 @@ class AIAgent:
         self.model_name = "qwen2:1.5b" # <-- *** MODIFIED: Set model name here ***
         
         # 1. Map tool names to the actual Python functions
-        # (ส่วนนี้ของคุณถูกต้องสมบูรณ์แล้ว)
         self.tool_functions = {
             "login": self.api_client.login,
             "list_products": self.api_client.list_products,
@@ -395,17 +392,17 @@ class AIAgent:
     def _create_system_prompt(self):
         """Builds the large system prompt to teach the AI model how to use tools."""
         
-        # 1. สร้าง JSON ของเครื่องมือ
+        
         tools_json = json.dumps(TOOLS_DEFINITION)
         
-        # 2. เราจะใช้การต่อสตริงที่ปลอดภัยเหมือนเดิม
         
-        # ส่วนที่ 1: แนะนำตัวและเครื่องมือ
+        
+        
         prompt_part_1 = """
 You are a JSON-only assistant. You MUST always respond with a valid JSON object.
 You have access to these tools:
 """
-        # ส่วนที่ 2: กฎและตัวอย่าง (ที่เข้มงวดขึ้น)
+        
         prompt_part_2 = """
 
 ---
@@ -439,7 +436,7 @@ Your job is to help the user by calling tools.
 
 Now, begin the conversation.
 """
-        # 3. ต่อสตริง
+        
         return prompt_part_1 + tools_json + prompt_part_2
     
     def _normalize_args(self, args):
@@ -449,7 +446,7 @@ Now, begin the conversation.
         into a single dict {'a': 1, 'b': 2}.
         """
         if isinstance(args, dict):
-            return args  # It's already correct, do nothing.
+            return args  
         
         if isinstance(args, list):
             print("   [Fixing AI args: Received a list, merging into one dict...]")
@@ -504,10 +501,10 @@ Now, begin the conversation.
                 # 2. Call Ollama API
                 # We ask for JSON format, which forces the model to obey our system prompt
                 payload = {
-                    "model": self.model_name, # <-- *** MODIFIED: Use class variable ***
+                    "model": self.model_name, 
                     "messages": self.chat_history,
                     "stream": False,
-                    "format": "json"  # This is the magic!
+                    "format": "json"  
                 }
                 
                 response = requests.post(OLLAMA_API_URL, json=payload)
