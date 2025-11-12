@@ -114,6 +114,20 @@ TOOLS_DEFINITION = [
         }
     },
     {
+        "name": "update_product",
+        "description": "อัปเดตข้อมูลสินค้าที่มีอยู่ (Requires 'admin' role)",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "product_id": {"type": "STRING", "description": "ID ของสินค้าที่ต้องการอัปเดต (เช่น 'prod-123abc')"},
+                "name": {"type": "STRING", "description": "ชื่อใหม่ของสินค้า"},
+                "description": {"type": "STRING", "description": "รายละเอียดใหม่ของสินค้า"},
+                "price": {"type": "NUMBER", "description": "ราคาใหม่ของสินค้า"}
+            },
+            "required": ["product_id", "name", "description", "price"]
+        }
+    },
+    {
         "name": "create_order",
         "description": "Creates a new order for a specific user with a list of items.",
         "parameters": {
@@ -335,6 +349,7 @@ class AIAgent:
             "list_products": self.api_client.list_products,
             "count_products": self.api_client.count_products,
             "create_product": self.api_client.create_product,
+            "update_product": self.api_client.update_product,
             "delete_product": self.api_client.delete_product,
             "get_order": self.api_client.get_order,
             "count_orders": self.api_client.count_orders,
@@ -464,14 +479,13 @@ Now, begin the conversation.
         """Executes the tool function and returns its result."""
         func_name = tool_call_data.get("name")
         raw_args = tool_call_data.get("arguments", {})
-
         args = self._normalize_args(raw_args)
         
         print(f"[Agent is calling tool: {func_name} with args: {args}]")
         
         if func_name not in self.tool_functions:
             print(f"Error: Unknown tool '{func_name}'", file=sys.stderr)
-            return {"error": f"Unknown tool '{func_name}'"}
+            return {"error": f"Unknown tool '{func_name}'"}, None
             
         func = self.tool_functions[func_name]
         try:
